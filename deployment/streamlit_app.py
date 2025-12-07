@@ -26,7 +26,7 @@ def download_model():
     model_dir.mkdir(parents=True, exist_ok=True)
     
     if not os.path.exists(MODEL_PATH):
-        with st.spinner('📥 Downloading model (one-time, ~46 MB)...'):
+        with st.spinner('Downloading model (one-time, ~46 MB)...'):
             try:
                 response = requests.get(MODEL_URL, stream=True)
                 response.raise_for_status()
@@ -42,11 +42,11 @@ def download_model():
                         if total_size > 0:
                             progress_bar.progress(min(downloaded / total_size, 1.0))
                 
-                st.success('✅ Model downloaded!')
+                st.success('Model downloaded!')
                 return True
             except Exception as e:
-                st.error(f'❌ Failed to download model: {e}')
-                st.info('Please check GitHub Releases: https://github.com/Stevenshanmukh/pneumonia-xray-classification/releases')
+                st.error(f'Failed to download model: {e}')
+                st.info('Check GitHub Releases: https://github.com/Stevenshanmukh/pneumonia-xray-classification/releases')
                 return False
     return True
 
@@ -84,11 +84,11 @@ with st.sidebar:
     **Sensitivity:** 97.95%  
     **AUC:** 0.9580
     
-    ⚠️ Research tool only.
+    Research tool only.
     
     ---
     
-    **First run:** Model downloads automatically from GitHub Releases (~46 MB)
+    First run: Model downloads automatically from GitHub Releases (~46 MB)
     """)
 
 col1, col2 = st.columns([1, 1])
@@ -117,9 +117,9 @@ with col2:
                 prediction = CLASS_NAMES[predicted_class]
                 
                 if prediction == "Pneumonia":
-                    st.error(f"⚠️ **Prediction: {prediction}**")
+                    st.error(f"**Prediction: {prediction}**")
                 else:
-                    st.success(f"✅ **Prediction: {prediction}**")
+                    st.success(f"**Prediction: {prediction}**")
                 
                 st.metric("Confidence", f"{confidence*100:.2f}%")
                 
@@ -128,31 +128,12 @@ with col2:
                     prob = probs[0, i].item()
                     st.progress(prob, text=f"{class_name}: {prob*100:.1f}%")
                 
-                st.info("💡 Grad-CAM visualization available in local deployment")
+                st.info("Grad-CAM visualization available in local deployment")
             except Exception as e:
                 st.error(f"Error during prediction: {str(e)}")
     else:
-        st.info("👆 Upload X-ray to begin")
+        st.info("Upload X-ray to begin")
 
 st.markdown("---")
 st.markdown("<div style='text-align:center'><p>EfficientNet-B0 | 90.87% Accuracy | Research Use Only</p></div>", unsafe_allow_html=True)
 ```
-
----
-
-## **What This Does:**
-
-1. ✅ **Checks if model exists** on Streamlit Cloud
-2. ✅ **Downloads from GitHub Release** if missing
-3. ✅ **Shows progress bar** during download
-4. ✅ **Caches download** (only downloads once)
-5. ✅ **Handles errors gracefully**
-
----
-
-## **Also Update requirements.txt:**
-
-Make sure `requests` is included:
-```
-https://github.com/Stevenshanmukh/pneumonia-xray-classification/edit/main/deployment/requirements.txt
-    
