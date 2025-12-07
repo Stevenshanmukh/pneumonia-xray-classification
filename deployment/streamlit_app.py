@@ -8,15 +8,8 @@ import torchvision.models as models
 import numpy as np
 from PIL import Image
 import torchvision.transforms as transforms
-from pytorch_grad_cam import GradCAM
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
-st.set_page_config(
-    page_title="Pneumonia Classifier",
-    page_icon="🫁",
-    layout="wide"
-)
+st.set_page_config(page_title="Pneumonia Classifier", page_icon="🫁", layout="wide")
 
 CLASS_NAMES = ['Normal', 'Pneumonia']
 IMAGE_SIZE = 224
@@ -34,32 +27,20 @@ def load_model():
 
 def preprocess_image(image):
     image_resized = image.resize((IMAGE_SIZE, IMAGE_SIZE), Image.LANCZOS)
-    image_array = np.array(image_resized).astype(np.float32) / 255.0
-    
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-    
     image_tensor = transform(image_resized).unsqueeze(0)
-    return image_tensor, image_array
-
-def generate_gradcam(model, image_tensor, predicted_class):
-    target_layers = [model.features[-1]]
-    cam = GradCAM(model=model, target_layers=target_layers)
-    targets = [ClassifierOutputTarget(predicted_class)]
-    grayscale_cam = cam(input_tensor=image_tensor, targets=targets)[0, :]
-    return grayscale_cam
+    return image_tensor
 
 st.title("🫁 Pediatric Pneumonia Detection")
 st.markdown("### AI-Powered Chest X-Ray Analysis")
 st.markdown("---")
 
 with st.sidebar:
-    st.header("ℹ️ About")
+    st.header("About")
     st.markdown("""
-    Deep learning for pneumonia detection from pediatric chest X-rays.
-    
     **Model:** EfficientNet-B0  
     **Accuracy:** 90.87%  
     **Sensitivity:** 97.95%  
@@ -71,20 +52,18 @@ with st.sidebar:
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.header("📤 Upload X-Ray")
-    uploaded_file = st.file_uploader("Choose X-ray image", type=['jpg', 'jpeg', 'png'])
-    
+    st.header("Upload X-Ray")
+    uploaded_file = st.file_uploader("Choose X-ray", type=['jpg', 'jpeg', 'png'])
     if uploaded_file:
         image = Image.open(uploaded_file).convert('RGB')
         st.image(image, caption="Uploaded X-Ray", use_column_width=True)
 
 with col2:
     if uploaded_file:
-        st.header("🔍 Results")
-        
+        st.header("Results")
         with st.spinner("Analyzing..."):
             model = load_model()
-            image_tensor, image_normalized = preprocess_image(image)
+            image_tensor = preprocess_image(image)
             
             with torch.no_grad():
                 outputs = model(image_tensor)
@@ -95,26 +74,18 @@ with col2:
             prediction = CLASS_NAMES[predicted_class]
             
             if prediction == "Pneumonia":
-                st.error(f"⚠️ **{prediction}**")
+                st.error(f"⚠️ **Prediction: {prediction}**")
             else:
-                st.success(f"✅ **{prediction}**")
+                st.success(f"✅ **Prediction: {prediction}**")
             
             st.metric("Confidence", f"{confidence*100:.2f}%")
             
+            st.markdown("### Class Probabilities")
             for i, class_name in enumerate(CLASS_NAMES):
-                st.progress(probs[0, i].item(), text=f"{class_name}: {probs[0, i].item()*100:.1f}%")
+                prob = probs[0, i].item()
+                st.progress(prob, text=f"{class_name}: {prob*100:.1f}%")
             
-            st.markdown("### 🔥 Grad-CAM")
-            
-            with st.spinner("Generating..."):
-                grayscale_cam = generate_gradcam(model, image_tensor, predicted_class)
-                cam_image = show_cam_on_image(image_normalized, grayscale_cam, use_rgb=True)
-            
-            c1, c2 = st.columns(2)
-            with c1:
-                st.image(grayscale_cam, caption="Heatmap", use_column_width=True)
-            with c2:
-                st.image(cam_image, caption="Overlay", use_column_width=True)
+            st.info("💡 Grad-CAM visualization available in local deployment")
     else:
         st.info("👆 Upload X-ray to begin")
 
