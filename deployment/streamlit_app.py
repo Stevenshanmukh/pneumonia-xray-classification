@@ -12,7 +12,11 @@ from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
-st.set_page_config(page_title="Pneumonia Classifier", page_icon="🫁", layout="wide")
+st.set_page_config(
+    page_title="Pneumonia Classifier",
+    page_icon="🫁",
+    layout="wide"
+)
 
 CLASS_NAMES = ['Normal', 'Pneumonia']
 IMAGE_SIZE = 224
@@ -31,10 +35,12 @@ def load_model():
 def preprocess_image(image):
     image_resized = image.resize((IMAGE_SIZE, IMAGE_SIZE), Image.LANCZOS)
     image_array = np.array(image_resized).astype(np.float32) / 255.0
+    
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+    
     image_tensor = transform(image_resized).unsqueeze(0)
     return image_tensor, image_array
 
@@ -50,11 +56,14 @@ st.markdown("### AI-Powered Chest X-Ray Analysis")
 st.markdown("---")
 
 with st.sidebar:
-    st.header("About")
+    st.header("ℹ️ About")
     st.markdown("""
+    Deep learning for pneumonia detection from pediatric chest X-rays.
+    
     **Model:** EfficientNet-B0  
     **Accuracy:** 90.87%  
-    **Sensitivity:** 97.95%
+    **Sensitivity:** 97.95%  
+    **AUC:** 0.9580
     
     ⚠️ Research tool only.
     """)
@@ -62,18 +71,21 @@ with st.sidebar:
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.header("Upload X-Ray")
-    uploaded_file = st.file_uploader("Choose X-ray", type=['jpg', 'jpeg', 'png'])
+    st.header("📤 Upload X-Ray")
+    uploaded_file = st.file_uploader("Choose X-ray image", type=['jpg', 'jpeg', 'png'])
+    
     if uploaded_file:
         image = Image.open(uploaded_file).convert('RGB')
         st.image(image, caption="Uploaded X-Ray", use_column_width=True)
 
 with col2:
     if uploaded_file:
-        st.header("Results")
+        st.header("🔍 Results")
+        
         with st.spinner("Analyzing..."):
             model = load_model()
             image_tensor, image_normalized = preprocess_image(image)
+            
             with torch.no_grad():
                 outputs = model(image_tensor)
                 probs = torch.softmax(outputs, dim=1)
@@ -81,6 +93,7 @@ with col2:
                 confidence = probs[0, predicted_class].item()
             
             prediction = CLASS_NAMES[predicted_class]
+            
             if prediction == "Pneumonia":
                 st.error(f"⚠️ **{prediction}**")
             else:
@@ -91,7 +104,8 @@ with col2:
             for i, class_name in enumerate(CLASS_NAMES):
                 st.progress(probs[0, i].item(), text=f"{class_name}: {probs[0, i].item()*100:.1f}%")
             
-            st.markdown("### Grad-CAM")
+            st.markdown("### 🔥 Grad-CAM")
+            
             with st.spinner("Generating..."):
                 grayscale_cam = generate_gradcam(model, image_tensor, predicted_class)
                 cam_image = show_cam_on_image(image_normalized, grayscale_cam, use_rgb=True)
@@ -102,7 +116,7 @@ with col2:
             with c2:
                 st.image(cam_image, caption="Overlay", use_column_width=True)
     else:
-        st.info("Upload X-ray to begin")
+        st.info("👆 Upload X-ray to begin")
 
 st.markdown("---")
-st.markdown("<div style='text-align:center'><p>EfficientNet-B0 | Research Use Only</p></div>", unsafe_allow_html=True)
+st.markdown("<div style='text-align:center'><p>EfficientNet-B0 | 90.87% Accuracy</p></div>", unsafe_allow_html=True)
