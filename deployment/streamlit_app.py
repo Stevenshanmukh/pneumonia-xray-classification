@@ -1,5 +1,5 @@
 """
-Streamlit Web App for Pneumonia Classification
+Streamlit Web App for Pneumonia Classification with Grad-CAM
 """
 import streamlit as st
 import torch
@@ -18,6 +18,14 @@ CLASS_NAMES = ['Normal', 'Pneumonia']
 IMAGE_SIZE = 224
 MODEL_PATH = '../models/efficientnet_best.pth'
 MODEL_URL = 'https://github.com/Stevenshanmukh/pneumonia-xray-classification/releases/download/v1.0/efficientnet_best.pth'
+
+try:
+    from pytorch_grad_cam import GradCAM
+    from pytorch_grad_cam.utils.image import show_cam_on_image
+    from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+    GRADCAM_AVAILABLE = True
+except ImportError:
+    GRADCAM_AVAILABLE = False
 
 @st.cache_resource
 def download_model():
@@ -65,12 +73,30 @@ def load_model():
 
 def preprocess_image(image):
     image_resized = image.resize((IMAGE_SIZE, IMAGE_SIZE), Image.LANCZOS)
+    image_array = np.array(image_resized).astype(np.float32) / 255.0
+    
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
+    
     image_tensor = transform(image_resized).unsqueeze(0)
-    return image_tensor
+    return image_tensor, image_array
+
+def generate_gradcam(model, image_tensor, predicted_class):
+    """Generate Grad-CAM heatmap"""
+    if not GRADCAM_AVAILABLE:
+        return None
+    
+    try:
+        target_layers = [model.features[-1]]
+        cam = GradCAM(model=model, target_layers=target_layers)
+        targets = [ClassifierOutputTarget(predicted_class)]
+        grayscale_cam = cam(input_tensor=image_tensor, targets=targets)[0, :]
+        return grayscale_cam
+    except Exception as e:
+        st.warning(f"Grad-CAM generation failed: {e}")
+        return None
 
 st.title("🫁 Pediatric Pneumonia Detection")
 st.markdown("### AI-Powered Chest X-Ray Analysis")
@@ -88,8 +114,16 @@ with st.sidebar:
     
     ---
     
-    First run: Model downloads automatically from GitHub Releases (~46 MB)
+    **Features:**
+    - Pneumonia classification
+    - Confidence scores
+    - Grad-CAM visualization
+    
+    First run: Model downloads automatically (~46 MB)
     """)
+    
+    if not GRADCAM_AVAILABLE:
+        st.warning("Grad-CAM not available in cloud deployment")
 
 col1, col2 = st.columns([1, 1])
 
@@ -106,7 +140,7 @@ with col2:
         with st.spinner("Analyzing..."):
             try:
                 model = load_model()
-                image_tensor = preprocess_image(image)
+                image_tensor, image_normalized = preprocess_image(image)
                 
                 with torch.no_grad():
                     outputs = model(image_tensor)
@@ -128,7 +162,25 @@ with col2:
                     prob = probs[0, i].item()
                     st.progress(prob, text=f"{class_name}: {prob*100:.1f}%")
                 
-                st.info("Grad-CAM visualization available in local deployment")
+                if GRADCAM_AVAILABLE:
+                    st.markdown("---")
+                    st.markdown("### Grad-CAM Visualization")
+                    with st.spinner("Generating heatmap..."):
+                        grayscale_cam = generate_gradcam(model, image_tensor, predicted_class)
+                        
+                        if grayscale_cam is not None:
+                            cam_image = show_cam_on_image(image_normalized, grayscale_cam, use_rgb=True)
+                            
+                            col_heat, col_over = st.columns(2)
+                            with col_heat:
+                                st.image(grayscale_cam, caption="Heatmap", use_column_width=True, clamp=True)
+                            with col_over:
+                                st.image(cam_image, caption="Overlay", use_column_width=True)
+                            
+                            st.info("Red areas indicate regions the model focused on")
+                else:
+                    st.info("Grad-CAM visualization not available in cloud deployment. Available in local setup.")
+                    
             except Exception as e:
                 st.error(f"Error during prediction: {str(e)}")
     else:
