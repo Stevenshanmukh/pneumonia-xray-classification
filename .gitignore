@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+*.egg-info/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# ===== LARGE FILES - DO NOT COMMIT =====
+# Model Checkpoints (models/ directory)
+models/*.pth
+models/*.pt
+models/*.ckpt
+models/baseline_cnn_best.pth
+models/densenet121_best.pth
+models/efficientnet_best.pth
+models/vit_best.pth
+
+# Keep only class_weights (small)
+!models/class_weights.pt
+
+# ONNX Models (deployment/ directory)
+deployment/*.onnx
+deployment/pneumonia_classifier_vit.onnx
+deployment/pneumonia_classifier_efficientnet.onnx
+
+# ===== DATASET - NEVER COMMIT =====
+data/
+datasets/
+
+# ===== IDE & OS =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ===== ENVIRONMENT =====
+.env
+.env.local
+.streamlit/secrets.toml
+
+# ===== TEMPORARY =====
+Untitled*.ipynb
+*.tmp
